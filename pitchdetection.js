@@ -16,18 +16,10 @@ function setup() {
 
 function draw() {
   background(100);
-  micLevel = mic.getLevel() * 100;
-  if (micLevel > 1.0) {
-    let spectrum = fft.analyze();
-
-    for (let i = 0; i < 127; i++) {
-      	energies[i] = fft.getEnergy(midiToFreq(i));
-      }
-    let indexOfMaxValue = indexOfMax(energies);
-    loudestFreq = midiToFreq(indexOfMaxValue);
-    text(loudestFreq, windowWidth/2, windowHeight/2);
-  }
-  text(micLevel, windowWidth/2, windowHeight/2 + 100);
+  fill(0);
+  analyzeFreq();
+  let curLoudestFreq = int(loudestFreq);
+  drawFrame(curLoudestFreq);
 }
 
 function indexOfMax(arr) {
@@ -44,4 +36,29 @@ function indexOfMax(arr) {
       }
   }
   return maxIndex;
+}
+
+function analyzeFreq() {
+  micLevel = mic.getLevel() * 100;
+  if (micLevel > 1.0) {
+    let spectrum = fft.analyze();
+
+    for (let i = 0; i < 127; i++) {
+      	energies[i] = fft.getEnergy(midiToFreq(i));
+      }
+    let indexOfMaxValue = indexOfMax(energies);
+    loudestFreq = midiToFreq(indexOfMaxValue);
+    text(loudestFreq, windowWidth/2, windowHeight/2);
+  }
+  text(micLevel, windowWidth/2, windowHeight/2 + 100);
+}
+
+function drawFrame(clf) {
+  let grassWidth = windowWidth / 4;
+  fill(20,130,20);
+  rect(0,0,windowWidth/4,windowHeight);
+  rect(windowWidth-grassWidth,0,grassWidth,windowHeight);
+
+  fill(200,30,38);
+  ellipse(grassWidth + clf * 2, windowHeight * 0.7, 50);
 }
