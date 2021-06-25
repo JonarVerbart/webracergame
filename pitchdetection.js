@@ -9,6 +9,11 @@ let calibrating;
 let startTime;
 let startingUp;
 let drawCount;
+let lastXpos;
+let lastSXpos;
+let smoothXpos;
+let deltaX;
+let speed;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -17,6 +22,7 @@ function setup() {
   mic = new p5.AudioIn()
   fft = new p5.FFT();
   calibrating = true;
+  startingUp = true;
   highestFreq = 0;
   lowestFreq = 20000;
   mic.start();
@@ -24,6 +30,9 @@ function setup() {
   textSize(48);
   drawCount = 0;
   startTime = 0;
+  speed = 0;
+  smoothXpos = windowWidth / 2;
+  lastXpos = windowWidth / 2;
 }
 
 function draw() {
@@ -34,6 +43,7 @@ function draw() {
   let curLoudestFreq = int(loudestFreq);
   if (drawCount > 500) {
     if (drawCount == 501) {
+      startingUp = false;
       print('Calibrating rn');
       startTime = millis();
     }
@@ -47,6 +57,7 @@ function draw() {
         print(highestFreq);
       }
     }
+    drawFrame(curLoudestFreq);
   }
   //drawFrame(curLoudestFreq);
 }
@@ -76,8 +87,10 @@ function analyzeFreq() {
       	energies[i] = fft.getEnergy(midiToFreq(i));
       }
     let indexOfMaxValue = indexOfMax(energies);
-    loudestFreq = midiToFreq(indexOfMaxValue);
-    text(loudestFreq, windowWidth/2, windowHeight/2);
+    if (startingUp === false) {
+      loudestFreq = midiToFreq(indexOfMaxValue);
+      text(loudestFreq, windowWidth/2, windowHeight/2);
+    }
   }
   text(micLevel, windowWidth/2, windowHeight/2 + 100);
 }
@@ -94,11 +107,28 @@ function calibrate(clf) {
 function drawFrame(clf) {
   let grassWidth = windowWidth / 4;
   let trackWidth = windowWidth - (2 * grassWidth);
-  let xpos = grassWidth + map(clf, lowestFreq, highestFreq, 0, trackWidth);
+  let xpos = grassWidth + map(clf, lowestFreq, highestFreq, 0, trackWidth, true);
+  if (xpos != lastXpos)  {
+    deltaX = xpos - lastSXpos;
+    if (deltaX > 0) {
+      speed = 4;
+    } else if (deltaX < 0) {
+      speed = -4;
+    } else {
+      speed = 0;
+    }
+  }
+  if (speed > 0 && smoothXpos < xpos && smoothXpos < trackWidth + grassWidth) {
+    smoothXpos = smoothXpos + speed;
+  } else if (speed < 0 && smoothXpos > xpos && smoothXpos > grassWidth) {
+    smoothXpos = smoothXpos + speed;
+  }
   fill(20,130,20);
   rect(0,0,windowWidth/4,windowHeight);
   rect(windowWidth-grassWidth,0,grassWidth,windowHeight);
 
   fill(200,30,38);
-  ellipse(xpos, windowHeight * 0.7, 50);
+  ellipse(smoothXpos, windowHeight * 0.7, 50);
+  lastXpos = xpos;
+  lastSXpos = smoothXpos;
 }
