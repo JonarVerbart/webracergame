@@ -13,7 +13,9 @@ let lastXpos;
 let lastSXpos;
 let smoothXpos;
 let deltaX;
-let speed;
+let xspeed;
+let menuActive;
+let levelRunning;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -21,16 +23,18 @@ function setup() {
   frameRate(60);
   mic = new p5.AudioIn()
   fft = new p5.FFT(0.95, 2048);
-  calibrating = true;
+  calibrating = false;
   startingUp = true;
+  menuActive = false;
+  levelRunning = false;
   highestFreq = 0;
   lowestFreq = 20000;
   mic.start();
   fft.setInput(mic);
-  textSize(48);
+  //textSize(48);
   drawCount = 0;
   startTime = 0;
-  speed = 0;
+  xspeed = 0;
   smoothXpos = windowWidth / 2;
   lastXpos = windowWidth / 2;
 }
@@ -38,32 +42,57 @@ function setup() {
 function draw() {
   drawCount += 1;
   background(100);
-  fill(0);
+  //fill(0);
   analyzeFreq();
-  textSize(48);
+  textSize(56);
   let curLoudestFreq = int(loudestFreq);
   if (drawCount > 500) {
     if (drawCount == 501) {
       startingUp = false;
-      print('Calibrating');
-      startTime = millis();
+      menuActive = true;
     }
     if(calibrating === true) {
-      text('Calibrating',50,50);
+      background(0,0,200);
+      fill(200,40,0);
+      text('WebRacer',windowWidth / 2,windowHeight / 2);
+      text('Calibrating...',windowWidth/2,windowHeight/2 + 50);
+      drawMicStats();
       if (millis() - startTime < 4000) {
         calibrate(curLoudestFreq);
       } else {
         calibrating = false;
+        levelRunning = true;
         print('Calibrated range:');
         print(lowestFreq);
         print(highestFreq);
       }
-    } else {
-      drawFrame(curLoudestFreq);
-      drawMicStats();
-    }
-  }
+    } else if (levelRunning === true) {
+        drawFrame(curLoudestFreq);
+        drawMicStats();
+      } else if (menuActive === true){
+          background(0,0,200);
+          //textSize(56);
+          fill(200,40,0);
+          textAlign(CENTER);
+          text('WebRacer',windowWidth / 2,windowHeight / 2);
+        }
   //drawFrame(curLoudestFreq);
+  } else {
+    background(0,0,200);
+    //textSize(56);
+    fill(200,40,0);
+    textAlign(CENTER);
+    text('Loading...',windowWidth / 2,windowHeight / 2);
+  }
+}
+
+function mousePressed() {
+  if (menuActive === true) {
+    menuActive = false;
+    calibrating = true;
+    print('Calibrating');
+    startTime = millis();
+  }
 }
 
 function indexOfMax(arr) {
@@ -116,17 +145,17 @@ function drawFrame(clf) {
   if (xpos != lastXpos)  {
     deltaX = xpos - lastSXpos;
     if (deltaX > 0) {
-      speed = deltaX / 10;
+      xspeed = deltaX / 10;
     } else if (deltaX < 0) {
-      speed = deltaX / 10;
+      xspeed = deltaX / 10;
     } else {
-      speed = 0;
+      xspeed = 0;
     }
   }
-  if (speed > 0 && smoothXpos < xpos && smoothXpos < trackWidth + grassWidth) {
-    smoothXpos = smoothXpos + speed;
-  } else if (speed < 0 && smoothXpos > xpos && smoothXpos > grassWidth) {
-    smoothXpos = smoothXpos + speed;
+  if (xspeed > 0 && smoothXpos < xpos && smoothXpos < trackWidth + grassWidth) {
+    smoothXpos = smoothXpos + xspeed;
+  } else if (xspeed < 0 && smoothXpos > xpos && smoothXpos > grassWidth) {
+    smoothXpos = smoothXpos + xspeed;
   }
   smoothXpos = constrain(smoothXpos,grassWidth,trackWidth + grassWidth);
   fill(20,130,20);
