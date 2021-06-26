@@ -4,7 +4,7 @@ var loudestFreq;
 var lowestFreq;
 var highestFreq;
 let energies = [];
-let calSample = [];
+//let calSample = [];
 let calibrating;
 let startTime;
 let startingUp;
@@ -16,6 +16,10 @@ let deltaX;
 let xspeed;
 let menuActive;
 let levelRunning;
+let numFreq;
+let lastclf;
+let grassWidth;
+let trackWidth;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -27,33 +31,36 @@ function setup() {
   startingUp = true;
   menuActive = false;
   levelRunning = false;
+  numFreq = 0;
   highestFreq = 0;
   lowestFreq = 20000;
   mic.start();
   fft.setInput(mic);
-  //textSize(48);
   drawCount = 0;
   startTime = 0;
   xspeed = 0;
   smoothXpos = windowWidth / 2;
   lastXpos = windowWidth / 2;
+  grassWidth = windowWidth / 4;
+  trackWidth = windowWidth - (2 * grassWidth);
+  laneMarks = new LaneMarks;
 }
 
 function draw() {
   drawCount += 1;
   background(100);
-  //fill(0);
   analyzeFreq();
   textSize(56);
   let curLoudestFreq = int(loudestFreq);
-  if (drawCount > 500) {
-    if (drawCount == 501) {
+  if (drawCount > 200) {
+    if (drawCount == 201) {
       startingUp = false;
       menuActive = true;
     }
     if(calibrating === true) {
       background(0,0,200);
       fill(200,40,0);
+      textAlign(CENTER);
       text('WebRacer',windowWidth / 2,windowHeight / 2);
       text('Calibrating...',windowWidth/2,windowHeight/2 + 50);
       drawMicStats();
@@ -61,13 +68,14 @@ function draw() {
         calibrate(curLoudestFreq);
       } else {
         calibrating = false;
+        laneMarks.setNmrLanes(numFreq);
         levelRunning = true;
         print('Calibrated range:');
         print(lowestFreq);
         print(highestFreq);
       }
     } else if (levelRunning === true) {
-        drawFrame(curLoudestFreq);
+        drawLevel(curLoudestFreq);
         drawMicStats();
       } else if (menuActive === true){
           background(0,0,200);
@@ -76,7 +84,6 @@ function draw() {
           textAlign(CENTER);
           text('WebRacer',windowWidth / 2,windowHeight / 2);
         }
-  //drawFrame(curLoudestFreq);
   } else {
     background(0,0,200);
     //textSize(56);
@@ -123,22 +130,24 @@ function analyzeFreq() {
     let indexOfMaxValue = indexOfMax(energies);
     if (startingUp === false) {
       loudestFreq = midiToFreq(indexOfMaxValue);
-      //text(loudestFreq, 50, windowHeight - 100);
     }
   }
-  //text(micLevel, 50, windowHeight - 50);
 }
 
 function calibrate(clf) {
+  if (clf != lastclf) {
+    numFreq += 1;
+  }
   if (clf > highestFreq) {
     highestFreq = clf;
   }
   if (clf < lowestFreq) {
     lowestFreq = clf;
   }
+  lastclf = clf;
 }
 
-function drawFrame(clf) {
+function drawLevel(clf) {
   let grassWidth = windowWidth / 4;
   let trackWidth = windowWidth - (2 * grassWidth);
   let xpos = grassWidth + map(clf, lowestFreq, highestFreq, 0, trackWidth, true);
@@ -166,6 +175,57 @@ function drawFrame(clf) {
   ellipse(smoothXpos, windowHeight * 0.7, 50);
   lastXpos = xpos;
   lastSXpos = smoothXpos;
+
+  laneMarks.move();
+  laneMarks.draw();
+}
+
+function makeLanes() {
+ for(i=0;i<laneNmr;i++){
+
+ }
+}
+
+class LaneMarks {
+  constructor() {
+    this.xpos = 0;
+    this.ypos = -100;
+    this.ypos2 = -1700;
+    this.yspeed = 10;
+    this.nmrLanes = 0;
+    this.laneWidth = 0;
+  }
+
+  setNmrLanes(nmrLanes) {
+    this.nmrLanes = nmrLanes;
+    this.laneWidth = trackWidth / this.nmrLanes;
+    this.xpos = this.laneWidth + grassWidth;
+  }
+
+  move() {
+    this.ypos = this.ypos + this.yspeed;
+    this.ypos2 = this.ypos2 + this.yspeed;
+    if(this.ypos > windowHeight*3 + 100) {
+      this.ypos = -100;
+    }
+    if(this.ypos2 > windowHeight*3 + 100) {
+      this.ypos2 = - windowHeight*3;
+    }
+  }
+
+  draw() {
+    fill(230);
+    for(let i=0;i<this.nmrLanes-1;i++) {
+      for(let j=0;j<20;j++) {
+        rect(this.xpos + this.laneWidth*i,this.ypos-(j*100),10,50);
+      }
+    }
+    for(let i=0;i<this.nmrLanes-1;i++) {
+      for(let j=0;j<20;j++) {
+        rect(this.xpos + this.laneWidth*i,this.ypos2-(j*100),10,50);
+      }
+    }
+  }
 }
 
 function drawMicStats() {
@@ -177,5 +237,6 @@ function drawMicStats() {
   fill(140,0,0);
   rect(20,windowHeight - 20,20,constrain(map(micLevel,0,30,0,-60,true),-60,0));
   fill(0);
-  text(round(loudestFreq,2),60,windowHeight - 20);
+  textAlign(LEFT);
+  text('Freq: ' + round(loudestFreq,2),60,windowHeight - 20);
 }
